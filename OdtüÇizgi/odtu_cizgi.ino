@@ -1,4 +1,11 @@
 #include <QTRSensors.h>
+#include <NewPing.h>
+
+#define TRIGGER_PIN  6  // Arduino pin tied to trigger pin on the ultrasonic sensor.
+#define ECHO_PIN     12  // Arduino pin tied to echo pin on the ultrasonic sensor.
+#define MAX_DISTANCE 200
+
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
 
 int P,D,I,error,lastError;
 int Rmotorf = 11;
@@ -9,19 +16,22 @@ int standby=10;
 int Lmotorf = 9;
 int enLmotor = 5;
 
-const int TrigPin = ; 
-const int EchoPin = ; 
+int a=1;
+
+const int trigPin = 6; 
+const int echoPin = 12; 
 
 int maxspeeda = 255;
 int maxspeedb = 255;
-int basespeeda = 170;
-int basespeedb = 170;
+int basespeeda = 100;
+int basespeedb = 100;
 
-float Kp = 0.3; 
+float Kp = 0.25; 
 float Ki = 0;
-float Kd = 3.5;
+float Kd = 2.5;
 
-int uzaklik,sayac=0,90sayac=0, park = 0;
+int sayac=0,doksansayac=0, park = 0;
+long uzaklik=100;
 
 QTRSensors qtr;
 
@@ -38,8 +48,9 @@ void setup()
   digitalWrite(13, HIGH);
   digitalWrite(standby, HIGH);// turn on Arduino's LED to indicate we are in calibration mode
   qtr.setTypeAnalog();
-  qtr.setSensorPins((const uint8_t[]){A0, A1, A2, A3, A4, A5}, SensorCount);
-  qtr.setEmitterPin(2);
+  qtr.setSensorPins((const uint8_t[]){A0,A1,A2,A3,A4,A5,A6,A7}, SensorCount);
+  
+
 
   delay(500);
   pinMode(LED_BUILTIN, OUTPUT);
@@ -73,17 +84,23 @@ void setup()
   Serial.println();
   Serial.println();
   delay(1000);
+  pinMode(trigPin,OUTPUT);
+  pinMode(echoPin,INPUT);
 }
 
 
 void loop() {
-  sag90();
-  sol90();
+  yol_ayrimi();
+  sag90(); 
+  sollama();
+  soladonme();
+  beyazizleme();
+  Serial.println(uzaklik);
 }
 
 void sollama(){
   uint16_t position = qtr.readLineBlack (sensorValues);
-  
+  mesafe();
   if (uzaklik<25 && sayac == 0){
     digitalWrite(Rmotorf,HIGH);    
     digitalWrite(Rmotorb,LOW);
@@ -91,7 +108,7 @@ void sollama(){
     digitalWrite(Lmotorb,HIGH);
     analogWrite (enRmotor, 75);
     analogWrite (enLmotor, 75);
-    delay(250);
+    delay(400);
   while(sensorValues[3]>200){
     uint16_t position = qtr.readLineBlack (sensorValues);
     digitalWrite(Rmotorb,LOW);    
@@ -110,8 +127,9 @@ void sollama(){
 
 void bekleme(){
   uint16_t position = qtr.readLineBlack (sensorValues);
+  mesafe();
   if(uzaklik<10&&sayac==1){
-      while (uzaklik<10 && sayac == 1){
+   while (uzaklik<10 && sayac == 1){
     digitalWrite(Rmotorf,HIGH);    
     digitalWrite(Rmotorb,LOW);
     digitalWrite(Lmotorf,LOW);
@@ -129,7 +147,7 @@ void bekleme(){
 
 void soladonme(){
   uint16_t position = qtr.readLineBlack (sensorValues);
-  if(sensorValues[0]<200 && sayac ==2){
+  if((sensorValues[6] <600 ||sensorValues[7]<600) && sayac ==2){
     digitalWrite(Rmotorf,HIGH);    
     digitalWrite(Rmotorb,LOW);
     digitalWrite(Lmotorf,LOW);
@@ -145,6 +163,7 @@ void soladonme(){
 }
 
 void beyazizleme(){
+  uint16_t position = qtr.readLineBlack (sensorValues);
   if(sensorValues[0]>600 && sensorValues[7]>600 && sayac ==3 ){
     while(sensorValues[0]>600 && sensorValues[7]>600){
       beyazpid();
@@ -159,32 +178,32 @@ void beyazizleme(){
 void yol_ayrimi(){
  uint16_t position = qtr.readLineBlack (sensorValues);
   
-  if(sensorValues[0]<300 && (sensorValues[3]>600 || sensorValues[4]>600) && sensorValues[7]<300){
+  if((sensorValues[0]<300||sensorValues[1]<300) && (sensorValues[3]>600 || sensorValues[4]>600) && (sensorValues[6]<300||sensorValues[7]<300)){
     while(sensorValues[3]>200){
        uint16_t position = qtr.readLineBlack (sensorValues);
        digitalWrite(Rmotorb,HIGH);    
        digitalWrite(Rmotorf,LOW);
        digitalWrite(Lmotorb,LOW);
        digitalWrite(Lmotorf,HIGH);
-       analogWrite (enRmotor, 80);
-       analogWrite (enLmotor, 80);
+       analogWrite (enRmotor, 55);
+       analogWrite (enLmotor, 55);
     }
   }
   else{
-    pid();
+    sol90();
   }
 }
 
 
 void sol90(){
    uint16_t position = qtr.readLineBlack (sensorValues);
-  if(sensorValues[0]<300 && sensorValues[1]<300  && sensorValues[6]>650){
-    digitalWrite(Rmotorb,HIGH);    
-    digitalWrite(Rmotorf,LOW);
-    digitalWrite(Lmotorb,HIGH);
+  if(sensorValues[0]<600 && sensorValues[7]>650 && sayac != 2){
+     digitalWrite(Rmotorf,LOW);    
+    digitalWrite(Rmotorb,HIGH);
     digitalWrite(Lmotorf,LOW);
-    analogWrite (enRmotor, 50);
-    analogWrite (enLmotor, 50);
+    digitalWrite(Lmotorb,HIGH);
+    analogWrite (enRmotor, 75);
+    analogWrite (enLmotor, 75);
     delay(50);
     uint16_t position = qtr.readLineBlack (sensorValues);
 
@@ -196,8 +215,8 @@ void sol90(){
     digitalWrite(Rmotorb,HIGH);
     digitalWrite(Lmotorf,HIGH);
     digitalWrite(Lmotorb,LOW);
-    analogWrite (enRmotor, 75);
-    analogWrite (enLmotor, 70);
+    analogWrite (enRmotor, 55);
+    analogWrite (enLmotor, 50);
     }
   }
   else{
@@ -217,19 +236,30 @@ void beyaz(){
 void sag90(){
    uint16_t position = qtr.readLineBlack (sensorValues);
      
-   if(sensorValues[0]>600  && sensorValues[6]<300 && sensorValues[7]<300 && park ==0){
-    digitalWrite(Rmotorb,HIGH);    
-    digitalWrite(Rmotorf,LOW);
-    digitalWrite(Lmotorb,HIGH);
+   if(sensorValues[0]>600  && sensorValues[7]<600 && park ==0){
+     digitalWrite(Rmotorf,LOW);    
+    digitalWrite(Rmotorb,HIGH);
     digitalWrite(Lmotorf,LOW);
-    analogWrite (enRmotor, 50);
-    analogWrite (enLmotor, 50);
+    digitalWrite(Lmotorb,HIGH);
+    analogWrite (enRmotor, 75);
+    analogWrite (enLmotor, 75);
     delay(50);
     
     uint16_t position = qtr.readLineBlack (sensorValues);
-    if(sayac>3&&90sayac==0){
-      90sayac++;
+    
+    if(sayac>3&&doksansayac==0){
+      doksansayac++;
       return;
+    }
+
+    else if(doksansayac>=2){
+    digitalWrite(Rmotorf,HIGH);    
+    digitalWrite(Rmotorb,LOW);
+    digitalWrite(Lmotorf,LOW);
+    digitalWrite(Lmotorb,HIGH);
+    analogWrite (enRmotor, 50);
+    analogWrite (enLmotor, 55);
+    delay(500);
     }
     
     while(sensorValues[3]>200)
@@ -239,14 +269,14 @@ void sag90(){
     digitalWrite(Rmotorb,LOW);
     digitalWrite(Lmotorf,LOW);
     digitalWrite(Lmotorb,HIGH);
-    analogWrite (enRmotor, 70);
-    analogWrite (enLmotor, 75);
+    analogWrite (enRmotor, 50);
+    analogWrite (enLmotor, 55);
 
     
     }
    
    }
-    else if(sensorValues[0]>600  && sensorValues[6]<300 && sensorValues[7]<300 && park ==1){
+    else if(sensorValues[0]>600  && sensorValues[6]<600 && sensorValues[7]<600 && park ==1){
       digitalWrite(Rmotorb,HIGH);    
     digitalWrite(Rmotorf,LOW);
     digitalWrite(Lmotorb,HIGH);
@@ -333,9 +363,9 @@ void beyazpid(){
     
     analogWrite(enRmotor,motorspeedb);
     analogWrite(enLmotor,motorspeeda);   
-    Serial.print(motorspeeda);
+  //  Serial.print(motorspeeda);
     Serial.print("          ");
-    Serial.println(motorspeedb);
+    //Serial.println(motorspeedb);
 }
 
 void pid()  {
@@ -386,20 +416,13 @@ void pid()  {
     
     analogWrite(enRmotor,motorspeedb);
     analogWrite(enLmotor,motorspeeda);   
-    Serial.print(motorspeeda);
-    Serial.print("          ");
-    Serial.println(motorspeedb);
+   // Serial.print(motorspeedb);
+ //   Serial.print("          ");
+   // Serial.println(motorspeeda);
+   // Serial.println("");
 }
 
 void mesafe(){
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(5); 
-  digitalWrite(trigPin, HIGH); 
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);   
-  sure = pulseIn(echoPin, HIGH);  
-  uzaklik= sure /29.1/2;
-
-  if(uzaklik > 200) 
-      uzaklik = 200; 
+  pid();
+  uzaklik=sonar.ping_cm();
 }
