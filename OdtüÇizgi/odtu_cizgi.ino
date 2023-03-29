@@ -3,7 +3,7 @@
 
 #define TRIGGER_PIN  6  // Arduino pin tied to trigger pin on the ultrasonic sensor.
 #define ECHO_PIN     12  // Arduino pin tied to echo pin on the ultrasonic sensor.
-#define MAX_DISTANCE 200
+#define MAX_DISTANCE 400
 
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
 
@@ -28,7 +28,7 @@ int basespeedb = 100;
 
 float Kp = 0.25; 
 float Ki = 0;
-float Kd = 2.5;
+float Kd = 2.75;
 
 int sayac=0,doksansayac=0, park = 0;
 long uzaklik=100;
@@ -90,18 +90,17 @@ void setup()
 
 
 void loop() {
-  yol_ayrimi();
-  sag90(); 
+  
+  sol90(); 
+  yol_ayrimi();  
+  sag90();
   sollama();
-  soladonme();
-  beyazizleme();
-  Serial.println(uzaklik);
 }
 
 void sollama(){
   uint16_t position = qtr.readLineBlack (sensorValues);
   mesafe();
-  if (uzaklik<25 && sayac == 0){
+  if (uzaklik<15 && sayac == 0){
     digitalWrite(Rmotorf,HIGH);    
     digitalWrite(Rmotorb,LOW);
     digitalWrite(Lmotorf,LOW);
@@ -130,15 +129,16 @@ void bekleme(){
   mesafe();
   if(uzaklik<10&&sayac==1){
    while (uzaklik<10 && sayac == 1){
+    mesafe();
     digitalWrite(Rmotorf,HIGH);    
     digitalWrite(Rmotorb,LOW);
     digitalWrite(Lmotorf,LOW);
     digitalWrite(Lmotorb,HIGH);
     analogWrite (enRmotor, 0);
     analogWrite (enLmotor, 0);
-    sayac++;
     }
-    delay(1000);
+    delay(1500);
+    sayac++;
   }
   else{
       pid();
@@ -179,7 +179,7 @@ void yol_ayrimi(){
  uint16_t position = qtr.readLineBlack (sensorValues);
   
   if((sensorValues[0]<300||sensorValues[1]<300) && (sensorValues[3]>600 || sensorValues[4]>600) && (sensorValues[6]<300||sensorValues[7]<300)){
-    while(sensorValues[3]>200){
+    while(sensorValues[4]>200){
        uint16_t position = qtr.readLineBlack (sensorValues);
        digitalWrite(Rmotorb,HIGH);    
        digitalWrite(Rmotorf,LOW);
@@ -188,26 +188,24 @@ void yol_ayrimi(){
        analogWrite (enRmotor, 55);
        analogWrite (enLmotor, 55);
     }
-  }
-  else{
-    sol90();
+    doksansayac++;
   }
 }
 
 
 void sol90(){
    uint16_t position = qtr.readLineBlack (sensorValues);
-  if(sensorValues[0]<600 && sensorValues[7]>650 && sayac != 2){
+  if(sensorValues[0]<400 && sensorValues[7]>650){
      digitalWrite(Rmotorf,LOW);    
     digitalWrite(Rmotorb,HIGH);
     digitalWrite(Lmotorf,LOW);
     digitalWrite(Lmotorb,HIGH);
     analogWrite (enRmotor, 75);
     analogWrite (enLmotor, 75);
-    delay(50);
+    delay(100);
     uint16_t position = qtr.readLineBlack (sensorValues);
 
-    while(sensorValues[4]>200)
+    while(sensorValues[3]>200)
     {
     uint16_t position = qtr.readLineBlack (sensorValues);
 
@@ -226,7 +224,7 @@ void sol90(){
 
 void beyaz(){
   uint16_t position = qtr.readLineBlack (sensorValues);
-  if(sayac == 4 &&sensorValues[0]<300&&sensorValues[1]<300&&sensorValues[2]<300&&sensorValues[3]<300&&sensorValues[4]<300&&sensorValues[5]<300&&sensorValues[6]<300&&sensorValues[7]<300){
+  if(sayac>1 && sensorValues[0]<300&&sensorValues[1]<300&&sensorValues[2]<300&&sensorValues[3]<300&&sensorValues[4]<300&&sensorValues[5]<300&&sensorValues[6]<300&&sensorValues[7]<300){
     park++;
   }
   else{
@@ -236,23 +234,20 @@ void beyaz(){
 void sag90(){
    uint16_t position = qtr.readLineBlack (sensorValues);
      
-   if(sensorValues[0]>600  && sensorValues[7]<600 && park ==0){
-     digitalWrite(Rmotorf,LOW);    
+   if(sensorValues[0]>600  && sensorValues[7]<500 && park ==0){
+    digitalWrite(Rmotorf,LOW);    
     digitalWrite(Rmotorb,HIGH);
     digitalWrite(Lmotorf,LOW);
     digitalWrite(Lmotorb,HIGH);
     analogWrite (enRmotor, 75);
     analogWrite (enLmotor, 75);
-    delay(50);
-    
-    uint16_t position = qtr.readLineBlack (sensorValues);
-    
-    if(sayac>3&&doksansayac==0){
+    delay(100);
+    if(90sayac == 2){
       doksansayac++;
-      return;
     }
+    uint16_t position = qtr.readLineBlack (sensorValues);
 
-    else if(doksansayac>=2){
+    else if(doksansayac==3){
     digitalWrite(Rmotorf,HIGH);    
     digitalWrite(Rmotorb,LOW);
     digitalWrite(Lmotorf,LOW);
@@ -260,9 +255,10 @@ void sag90(){
     analogWrite (enRmotor, 50);
     analogWrite (enLmotor, 55);
     delay(500);
+    doksansayac++;
     }
     
-    while(sensorValues[3]>200)
+    while(sensorValues[4]>200)
     {
     uint16_t position = qtr.readLineBlack (sensorValues);
      digitalWrite(Rmotorf,HIGH);    
@@ -276,14 +272,14 @@ void sag90(){
     }
    
    }
-    else if(sensorValues[0]>600  && sensorValues[6]<600 && sensorValues[7]<600 && park ==1){
+    else if(sensorValues[0]>600  && sensorValues[7]<600 && park ==1){
       digitalWrite(Rmotorb,HIGH);    
     digitalWrite(Rmotorf,LOW);
     digitalWrite(Lmotorb,HIGH);
     digitalWrite(Lmotorf,LOW);
     analogWrite (enRmotor, 50);
-    analogWrite (enLmotor, 50);
-    delay(50);
+    analogWrite (enLmotor, 55);
+    delay(100);
     
     uint16_t position = qtr.readLineBlack (sensorValues);
     
@@ -373,13 +369,6 @@ void pid()  {
   
   uint16_t position = qtr.readLineBlack (sensorValues);
   int error = 3500 - position;
-   /*
-    for (uint8_t i = 0; i < SensorCount; i++)
-  {
-    Serial.print(sensorValues[i]);
-    Serial.print('\t');
-  }
-  */
   //uSerial.println(position);
    
   P = error;
