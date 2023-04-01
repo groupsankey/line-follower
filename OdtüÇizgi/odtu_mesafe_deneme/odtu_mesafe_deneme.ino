@@ -7,7 +7,7 @@
 #define solmotorpwmpin 10
 
 int mz80 = 11;
-
+int sensor_durumu;
 void setup() {
   pinMode(sagmotor1, OUTPUT);
   pinMode(sagmotor2, OUTPUT);
@@ -20,17 +20,17 @@ void setup() {
 }
 
 void loop() {
-  Sensor_durumu = digitalRead(mz80);
-  digitalWrite(sagmotor1, HIGH);
+  sensor_durumu = digitalRead(mz80);
+    digitalWrite(sagmotor1, HIGH);
     digitalWrite(sagmotor2, LOW);
     digitalWrite(solmotor1, HIGH);
     digitalWrite(solmotor2, LOW);
     analogWrite(sagmotorpwmpin,150);
     analogWrite(sagmotorpwmpin, 150);
- if(Sensor_durumu == 0){
-  While(Sensor_durumu == 0){
-    digitalWrite(sagmotor1, HIGH);
-    digitalWrite(sagmotor2, LOW);
+ if(sensor_durumu == 0){
+  while(sensor_durumu == 0){
+    digitalWrite(sagmotor1, LOW);
+    digitalWrite(sagmotor2, HIGH);
     digitalWrite(solmotor1, HIGH);
     digitalWrite(solmotor2, LOW);
     analogWrite(sagmotorpwmpin,0);

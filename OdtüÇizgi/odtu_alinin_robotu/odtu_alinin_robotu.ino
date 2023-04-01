@@ -71,6 +71,7 @@ void loop() {
   sensoroku();
   if(Sensor_durumu == 0){
   while(Sensor_durumu == 0){
+    Sensor_durumu = digitalRead(mz80);
     motorkontrol(0,0);
       }
       delay(1000);
