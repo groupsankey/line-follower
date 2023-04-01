@@ -16,7 +16,7 @@ int standby=10;
 int Lmotorf = 9;
 int enLmotor = 5;
 
-int MZ80_PINI = 10;
+int MZ80_PINI = 2;
 int SENSOR_DURUMU = 1; 
 
 int a=1;
@@ -26,14 +26,14 @@ const int echoPin = 12;
 
 int maxspeeda = 255;
 int maxspeedb = 255;
-int basespeeda = 100;
-int basespeedb = 100;
+int basespeeda = 90;
+int basespeedb = 90;
 
-float Kp = 0.2; 
+float Kp = 0.18; 
 float Ki = 0;
-float Kd = 2.75;
+float Kd = 2.5;
 
-int sayac=5,doksansayac=0, park = 0;
+int sayac=0,doksansayac=0, park = 0;
 long uzaklik=100;
 
 QTRSensors qtr;
@@ -98,12 +98,17 @@ void loop() {
   beyazizleme();
   soladonme();
   daire();
-  yol_ayrimi(); yolagirme();
+  yola_girme();
+  sollama();
+  bekleme();
+  yol_ayrimi(); 
+  ab();
+ 
   
 }
 
 void sollama(){
-  uint16_t position = qtr.readLineWhite (sensorValues);
+  uint16_t position = qtr.readLineBlack (sensorValues);
    SENSOR_DURUMU = digitalRead(MZ80_PINI);
   if (SENSOR_DURUMU == 0 && sayac == 0){
     digitalWrite(Rmotorf,HIGH);    
@@ -112,16 +117,16 @@ void sollama(){
     digitalWrite(Lmotorb,HIGH);
     analogWrite (enRmotor, 50);
     analogWrite (enLmotor, 50);
-    delay(200);
-    uint16_t position = qtr.readLineWhite (sensorValues);
+    delay(300);
+    uint16_t position = qtr.readLineBlack (sensorValues);
   while(sensorValues[3]>600){
-    uint16_t position = qtr.readLineWhite (sensorValues);
+    uint16_t position = qtr.readLineBlack (sensorValues);
     digitalWrite(Rmotorb,LOW);    
     digitalWrite(Rmotorf,HIGH);
     digitalWrite(Lmotorb,LOW);
     digitalWrite(Lmotorf,HIGH);
-    analogWrite (enRmotor, 100);
-    analogWrite (enLmotor, 100);
+    analogWrite (enRmotor, 40);
+    analogWrite (enLmotor, 40);
     }
     sayac++;
   }
@@ -131,10 +136,9 @@ void sollama(){
 }
 
 void bekleme(){
-  uint16_t position = qtr.readLineWhite (sensorValues);
+  uint16_t position = qtr.readLineBlack (sensorValues);
   SENSOR_DURUMU = digitalRead(MZ80_PINI);
   if(SENSOR_DURUMU==0&&sayac==1){
-    
    while (SENSOR_DURUMU == 0 && sayac == 1){
     SENSOR_DURUMU = digitalRead(MZ80_PINI);
     digitalWrite(Rmotorf,HIGH);    
@@ -154,16 +158,16 @@ void bekleme(){
 
 void soladonme(){
   uint16_t position = qtr.readLineBlack (sensorValues);
-  if((sensorValues[6] <400 ||sensorValues[7]<400) && sayac ==2){
+  if(sensorValues[7]<600 && sayac == 2){
     digitalWrite(Rmotorf,HIGH);    
     digitalWrite(Rmotorb,LOW);
     digitalWrite(Lmotorf,LOW);
     digitalWrite(Lmotorb,HIGH);
     analogWrite (enRmotor, 50);
     analogWrite (enLmotor, 50);
-    delay(200);
+    delay(300);
      uint16_t position = qtr.readLineBlack (sensorValues);
-    sayac++;
+    
     while(sensorValues[4]>600){
        uint16_t position = qtr.readLineBlack (sensorValues);
       digitalWrite(Rmotorf,HIGH);    
@@ -173,6 +177,7 @@ void soladonme(){
     analogWrite (enRmotor, 45);
     analogWrite (enLmotor, 45);
     }
+    sayac++;
   }
   else{
     pid();
@@ -199,20 +204,61 @@ void beyazizleme(){
   }
 }
 
+void ab(){
+  uint16_t position = qtr.readLineBlack (sensorValues);
+  if(sensorValues[0]>600&&sensorValues[1]>600&&sensorValues[2]>600&&sensorValues[3]>600&&sensorValues[4]>600&&sensorValues[5]>600&&sensorValues[6]>600&&sensorValues[7]>600&&sayac==4){
+    uint16_t position = qtr.readLineBlack (sensorValues);
+    while(sensorValues[3]>600){
+      uint16_t position = qtr.readLineBlack (sensorValues);
+      digitalWrite(Rmotorb,LOW);    
+       digitalWrite(Rmotorf,HIGH);
+       digitalWrite(Lmotorb,HIGH);
+       digitalWrite(Lmotorf,LOW);
+       analogWrite (enRmotor, 50);
+       analogWrite (enLmotor, 50);
+    }
+    sayac++;
+  }
+}
+
 void yol_ayrimi(){
  uint16_t position = qtr.readLineBlack (sensorValues);
   
   if((sensorValues[0]<400||sensorValues[1]<400) && (sensorValues[3]>600 || sensorValues[4]>600) && (sensorValues[6]<400||sensorValues[7]<400)){
-    while(sensorValues[4]>600){
+       digitalWrite(Rmotorb,LOW);    
+       digitalWrite(Rmotorf,HIGH);
+       digitalWrite(Lmotorb,LOW);
+       digitalWrite(Lmotorf,HIGH);
+       analogWrite (enRmotor, 40);
+       analogWrite (enLmotor, 40);
+       delay(100);
        uint16_t position = qtr.readLineBlack (sensorValues);
+    while(sensorValues[3]>400){
+       uint16_t position = qtr.readLineBlack (sensorValues);
+       digitalWrite(13,HIGH);
        digitalWrite(Rmotorb,HIGH);    
        digitalWrite(Rmotorf,LOW);
        digitalWrite(Lmotorb,LOW);
        digitalWrite(Lmotorf,HIGH);
-       analogWrite (enRmotor, 55);
-       analogWrite (enLmotor, 55);
+       analogWrite (enRmotor, 40);
+       analogWrite (enLmotor, 40);
     }
+    digitalWrite(13,LOW);
   }
+
+else if(sensorValues[3]>600 && sensorValues[4]>600 && sensorValues[2]>600 &&sensorValues[5]>600 && sayac ==0){
+uint16_t position = qtr.readLineBlack (sensorValues);
+    while(sensorValues[3]>400){
+       uint16_t position = qtr.readLineBlack (sensorValues);
+       digitalWrite(13,HIGH);
+       digitalWrite(Rmotorb,HIGH);    
+       digitalWrite(Rmotorf,LOW);
+       digitalWrite(Lmotorb,LOW);
+       digitalWrite(Lmotorf,HIGH);
+       analogWrite (enRmotor, 40);
+       analogWrite (enLmotor, 40);
+    }
+ }
   else{
     sag90();
     sol90();
@@ -243,24 +289,41 @@ void yolagirme(){
 
 }
 
+void yola_girme(){
+  if(sensorValues[8] >600 && sensorValues[7] >600 && sensorValues[6] >600 &&  sensorValues[5]>600 && sensorValues[4] >600 && sensorValues[3] >600 && sensorValues[2] > 600 && sensorValues[1] >600 && sensorValues[0] >600 && sayac == 1){
+       uint16_t position = qtr.readLineBlack (sensorValues);
+       while(sensorValues[3] >400){
+       uint16_t position = qtr.readLineBlack (sensorValues);
+       digitalWrite(Rmotorb,LOW);    
+       digitalWrite(Rmotorf,HIGH);     
+       digitalWrite(Lmotorb,HIGH);
+       digitalWrite(Lmotorf,LOW);
+       analogWrite (enRmotor, 45);
+       analogWrite (enLmotor, 45);
+       }
+  }
+
+ }
+
 
 void daire(){
     uint16_t position = qtr.readLineBlack (sensorValues);
-  if( sensorValues[3] <400 && sensorValues[4]<400&& sensorValues[5]<400 && sayac==5){
+  if( sensorValues[3] <400 && sensorValues[4]<400&& (sensorValues[5]<400 or sensorValues[2] <400) && sayac==5){
     digitalWrite(Rmotorb,LOW);    
        digitalWrite(Rmotorf,HIGH);     
        digitalWrite(Lmotorb,LOW);
        digitalWrite(Lmotorf,HIGH);
        analogWrite (enRmotor, 50);
        analogWrite (enLmotor, 50);
-       delay(50);
-    while(sensorValues[2]<400){
-       uint16_t position = qtr.readLineWhite (sensorValues);
+       delay(250);
+    while(sensorValues[3]<400){
+      digitalWrite(13,HIGH);
+       uint16_t position = qtr.readLineBlack (sensorValues);
        digitalWrite(Rmotorb,HIGH);    
        digitalWrite(Rmotorf,LOW);
        digitalWrite(Lmotorb,LOW);
        digitalWrite(Lmotorf,HIGH);
-       analogWrite (enRmotor, 55);
+       analogWrite (enRmotor, 70);
        analogWrite (enLmotor, 55);
     }
     doksansayac++;
@@ -290,8 +353,8 @@ void sol90(){
     digitalWrite(Rmotorb,HIGH);
     digitalWrite(Lmotorf,HIGH);
     digitalWrite(Lmotorb,LOW);
-    analogWrite (enRmotor, 50);
-    analogWrite (enLmotor, 55);
+    analogWrite (enRmotor, 60);
+    analogWrite (enLmotor, 65);
     delay(100);
     doksansayac++;
     }
@@ -303,8 +366,8 @@ void sol90(){
     digitalWrite(Rmotorb,HIGH);
     digitalWrite(Lmotorf,HIGH);
     digitalWrite(Lmotorb,LOW);
-    analogWrite (enRmotor, 55);
-    analogWrite (enLmotor, 50);
+    analogWrite (enRmotor, 65);
+    analogWrite (enLmotor, 60);
     }
     
   }
@@ -334,8 +397,8 @@ void sol90(){
     digitalWrite(Rmotorf,HIGH);
     digitalWrite(Lmotorb,LOW);
     digitalWrite(Lmotorf,HIGH);
-    analogWrite (enRmotor, 100);
-    analogWrite (enLmotor, 100);
+    analogWrite (enRmotor, 90);
+    analogWrite (enLmotor,90);
     delay(1000);
     digitalWrite(Rmotorb,LOW);    
     digitalWrite(Rmotorf,HIGH);
@@ -362,27 +425,27 @@ void beyaz(){
 void sag90(){
    uint16_t position = qtr.readLineBlack (sensorValues);
      
-   if(sensorValues[0]>600  && sensorValues[7]<400 && park ==0 && sayac !=3 && sayac!=2){
+   if(sensorValues[0]>600  && sensorValues[7]<400 && park ==0 && sayac !=3 && sayac!=2 && sayac !=0 && sayac !=4){
     digitalWrite(Rmotorf,LOW);    
     digitalWrite(Rmotorb,HIGH);
     digitalWrite(Lmotorf,LOW);
     digitalWrite(Lmotorb,HIGH);
     analogWrite (enRmotor, 75);
     analogWrite (enLmotor, 75);
-    delay(100);
+    delay(150);
     
     uint16_t position = qtr.readLineBlack (sensorValues);
     
     
-    while(sensorValues[4]>600)
+    while(sensorValues[3]>600)
     {
     uint16_t position = qtr.readLineBlack (sensorValues);
      digitalWrite(Rmotorf,HIGH);    
     digitalWrite(Rmotorb,LOW);
     digitalWrite(Lmotorf,LOW);
     digitalWrite(Lmotorb,HIGH);
-    analogWrite (enRmotor, 50);
-    analogWrite (enLmotor, 55);
+    analogWrite (enRmotor, 60);
+    analogWrite (enLmotor, 65);
 
     
     }
